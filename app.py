@@ -216,10 +216,27 @@ def stop_following(follow_id):
 def profile():
     """Update profile for current user."""
 
-    form = EditProfileForm()
+    if not g.user:
+        flash("You must be logged in first.", "danger")
+        return redirect("/")
 
-    if g.user:
-        return render_template("/users/edit.html", form=form)
+    user = User.query.get_or_404(g.user.id)
+    form = EditProfileForm(obj=user)
+
+    if form.validate_on_submit():
+        if User.authenticate(user.username, form.password.data):
+            user.username = form.username.data
+            user.email = form.email.data
+            user.image_url = form.image_url.data
+            user.header_image_url = form.header_image_url.data
+            user.bio = form.bio.data
+            db.session.commit()
+            flash("User data has been updated.", "success")
+            return redirect(f"/users/{user.id}")
+        flash("The password you entered is incorrect, please try again.", "danger")
+        return redirect("/")
+
+    return render_template("/users/edit.html", form=form, user=user)
 
 
 @app.route('/users/delete', methods=["POST"])
@@ -298,15 +315,16 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of followed_users
     """
+    following_ids = [f.id for f in g.user.following] + [g.user.id]
 
     if g.user:
         messages = (Message
                     .query
+                    .filter(Message.user_id.in_(following_ids))
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
         return render_template('home.html', messages=messages)
-
     else:
         return render_template('home-anon.html')
 
