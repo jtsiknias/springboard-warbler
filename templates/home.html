@@ -71,8 +71,9 @@
                 </div>
                 <form
                     method="POST"
-                    action="/users/add_like/{{ msg.id }}"
+                    action="/messages/{{ msg.id }}/like"
                     id="messages-form"
+                    class="messages-like"
                 >
                     <button
                         class="

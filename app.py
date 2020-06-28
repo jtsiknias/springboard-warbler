@@ -248,11 +248,17 @@ def delete_user():
         return redirect("/")
 
     do_logout()
-
     db.session.delete(g.user)
     db.session.commit()
 
     return redirect("/signup")
+
+
+@app.route("/users/<int:user_id>/likes")
+def user_likes(user_id):
+    user = User.query.get_or_404(user_id)
+    likes = user.likes
+    return render_template("/users/likes.html", user=user, likes=user.likes)
 
 
 ##############################################################################
@@ -304,8 +310,33 @@ def messages_destroy(message_id):
     return redirect(f"/users/{g.user.id}")
 
 
-##############################################################################
-# Homepage and error pages
+@app.route("/messages/<int:message_id>/like", methods=["POST"])
+def add_like(message_id):
+    """Toggle a liked message for the currently-logged-in user."""
+
+    if not g.user:
+        flash("You must be logged in.", "danger")
+        return redirect("/")
+
+    liked_message = Message.query.get_or_404(message_id)
+    if liked_message.user_id == g.user.id:
+        # Check so you cannot like your own message
+        return abort(403)
+
+    user_likes = g.user.likes
+
+    if liked_message in user_likes:
+        # message was unliked, so remove from global user.likes
+        g.user.likes = [like for like in user_likes if like != liked_message]
+    else:
+        # message was liked, so add it to global user.likes list
+        g.user.likes.append(liked_message)
+
+    db.session.commit()
+    return redirect("/")
+
+    ##############################################################################
+    # Homepage and error pages
 
 
 @app.route('/')
@@ -315,9 +346,9 @@ def homepage():
     - anon users: no messages
     - logged in: 100 most recent messages of followed_users
     """
-    following_ids = [f.id for f in g.user.following] + [g.user.id]
 
     if g.user:
+        following_ids = [f.id for f in g.user.following] + [g.user.id]
         messages = (Message
                     .query
                     .filter(Message.user_id.in_(following_ids))
