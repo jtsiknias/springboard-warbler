@@ -8,6 +8,7 @@
 from app import app
 import os
 from unittest import TestCase
+from sqlalchemy import exc
 
 from models import db, User, Message, Follows
 
@@ -90,7 +91,6 @@ class UserModelTestCase(TestCase):
         self.assertIn(f"<User #1000", self.user1.__repr__())
 
     def test_valid_user(self):
-
         valid_user = User.signup(
             "validuser", "validuser@example.com", "password", None)
         db.session.add(valid_user)
@@ -100,3 +100,25 @@ class UserModelTestCase(TestCase):
         self.assertEqual(valid_user.email, "validuser@example.com")
         self.assertEqual(valid_user.username, "validuser")
         self.assertNotEqual(valid_user.password, "password")
+
+    def test_invalid_username_signup(self):
+        """Test invalid email at signup"""
+        invalid_user = User.signup(None, "example@email.com", "password", None)
+
+        with self.assertRaises(exc.IntegrityError) as context:
+            db.session.commit()
+
+    def test_invalid_email_signup(self):
+        """Test invalid email at signup"""
+        invalid_user = User.signup("invaliduser", None, "password", None)
+
+        with self.assertRaises(exc.IntegrityError) as context:
+            db.session.commit()
+
+    def test_invalid_password_signup(self):
+        """Test invalid password at signup"""
+        with self.assertRaises(ValueError) as context:
+            User.signup("invaliduser", "invaliduser@example.com", None, None)
+
+        with self.assertRaises(ValueError) as context:
+            User.signup("invaliduser", "invaliduser@example.com", "", None)
