@@ -5,6 +5,7 @@
 #    python -m unittest test_user_model.py
 
 
+from app import app
 import os
 from unittest import TestCase
 
@@ -20,7 +21,6 @@ os.environ['DATABASE_URL'] = "postgresql:///warbler-test"
 
 # Now we can import app
 
-from app import app
 
 # Create our tables (we do this here, so we only create the tables
 # once for all tests --- in each test, we'll delete the data
@@ -35,9 +35,28 @@ class UserModelTestCase(TestCase):
     def setUp(self):
         """Create test client, add sample data."""
 
-        User.query.delete()
-        Message.query.delete()
-        Follows.query.delete()
+        db.drop_all()
+        db.create_all()
+
+        user1 = User.signup("user1", "user@example.com", "password", None)
+        uid1 = 1000
+        user1.id = uid1
+
+        user2 = User.signup("user2", "user2@example.com", "password", None)
+        uid2 = 1234
+        user2.id = uid2
+
+        db.session.add(user1, user2)
+        db.session.commit()
+
+        user1 = User.query.get(uid1)
+        user2 = User.query.get(uid2)
+
+        self.user1 = user1
+        self.uid1 = uid1
+
+        self.user2 = user2
+        self.uid2 = uid2
 
         self.client = app.test_client()
 
@@ -56,3 +75,13 @@ class UserModelTestCase(TestCase):
         # User should have no messages & no followers
         self.assertEqual(len(u.messages), 0)
         self.assertEqual(len(u.followers), 0)
+
+    def test_follow_user(self):
+        """Does 'following' feature work"""
+        self.user2.followers.append(self.user1)
+        db.session.commit()
+
+        self.assertEqual(len(self.user2.followers), 1)
+        self.assertEqual(len(self.user1.followers), 0)
+        self.assertEqual(len(self.user2.following), 1)
+        self.assertEqual(len(self.user1.following), 1)

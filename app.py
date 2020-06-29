@@ -246,7 +246,6 @@ def delete_user():
     if not g.user:
         flash("Access unauthorized.", "danger")
         return redirect("/")
-
     do_logout()
     db.session.delete(g.user)
     db.session.commit()
