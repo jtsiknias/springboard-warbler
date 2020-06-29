@@ -83,5 +83,20 @@ class UserModelTestCase(TestCase):
 
         self.assertEqual(len(self.user2.followers), 1)
         self.assertEqual(len(self.user1.followers), 0)
-        self.assertEqual(len(self.user2.following), 1)
+        self.assertEqual(len(self.user2.following), 0)
         self.assertEqual(len(self.user1.following), 1)
+
+    def test_repr(self):
+        self.assertIn(f"<User #1000", self.user1.__repr__())
+
+    def test_valid_user(self):
+
+        valid_user = User.signup(
+            "validuser", "validuser@example.com", "password", None)
+        db.session.add(valid_user)
+        db.session.commit()
+
+        self.assertIsNotNone(valid_user)
+        self.assertEqual(valid_user.email, "validuser@example.com")
+        self.assertEqual(valid_user.username, "validuser")
+        self.assertNotEqual(valid_user.password, "password")
